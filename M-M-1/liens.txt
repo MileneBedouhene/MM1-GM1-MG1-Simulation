@@ -1,9 +1,0 @@
-https://qmodels.readthedocs.io/en/latest/mm1.html
-
-https://fr.mathworks.com/help/simevents/ug/m-m-1-queuing-system.html
-
-
-https://github.com/sudhan-bhattarai/MM1_Queue_Simulation/blob/master/mm1.py
-
-
-mm1 queue simulation

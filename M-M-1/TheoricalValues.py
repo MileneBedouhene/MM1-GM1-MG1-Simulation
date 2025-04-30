@@ -13,7 +13,7 @@ def mm1_queue(lambda_rate, mu_rate):
     print(f"Average response time: {avg_response_time:.4f}")
 
 # Example values
-λ = 0.1  # Arrival rate
+λ = 0.9  # Arrival rate
 μ = 1  # Service rate
 
 mm1_queue(λ, μ)
