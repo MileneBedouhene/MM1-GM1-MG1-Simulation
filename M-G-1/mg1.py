@@ -3,12 +3,13 @@ import math
 import heapq
 import statistics
 
-def exp_rv(beta):
-    return -beta * math.log(random.random())
+def exp_rv(lambda_value):
+    """Generate an exponential random variate with rate lambda_value (1/lambda)."""
+    return -math.log(random.random()) / lambda_value
 
 def hyperx(x, s):
     """
-    Generate a random variate from Morse's two-stage hyperexponential distribution
+    Generate a random variate from a two-stage hyperexponential distribution.
     x: mean
     s: standard deviation (must be greater than x)
     Returns: random variate from the distribution
@@ -30,65 +31,60 @@ def hyperx(x, s):
 
 def generate_arrival_times(lambda_value, num_arrivals):
     """
-    Generate arrival times using Morse's hyperexponential distribution
+    Generate arrival times using an exponential distribution.
     lambda_value: mean arrival rate
     """
     arrival_times = []
     current_time = 0.0
-    mean = 1/lambda_value  # mean interarrival time
-    std = 3 * mean        # standard deviation (adjust as needed, must be > mean)
-    
     for _ in range(num_arrivals):
-        inter_arrival_time = hyperx(mean, std)
+        inter_arrival_time = exp_rv(lambda_value)
         current_time += inter_arrival_time
         arrival_times.append(current_time)
     return arrival_times
 
-# Fonction pour calculer l'intervalle de confiance
+# Function to calculate confidence intervals
 def confidence_interval(data, confidence=0.95):
     n = len(data)
     mean = statistics.mean(data)
     stddev = statistics.stdev(data)
-    z = 1.96  # pour un intervalle de confiance de 95%
+    z = 1.96  # for 95% confidence
     margin = z * (stddev / math.sqrt(n))
     return mean, (mean - margin, mean + margin)
 
-# Paramètres
-arrival_rate = 0.9  # lambda
-service_rate = 1.0  # mu
-beta = 1 / arrival_rate
-NUM_CUSTOMERS = 1000000  # Nombre de clients simulés
+# Parameters
+arrival_rate = 0.9  # lambda (mean arrival rate)
+service_rate = 1.0  # mu (mean service rate)
+NUM_CUSTOMERS = 1000000  # Number of customers to simulate
 
-# Générer les temps d'arrivée à l'avance
+# Step 1: Generate arrival times (exponentially distributed)
 arrival_times = generate_arrival_times(arrival_rate, NUM_CUSTOMERS)
 
-# Événements
+# Step 2: Initialize events and variables
 ARRIVAL = 1
 DEPARTURE = 2
 
-# Variables d'état
 current_time = 0.0
 queue = []
 server_busy = False
 event_list = []
 last_event_time = 0.0
-next_arrival_index = 0  # Indice de l'arrivée suivante à traiter
+next_arrival_index = 0  # Index for the next arrival to process
 
-# Statistiques
+# Statistics
 num_customers_served = 0
 area_queue = 0.0
 area_busy = 0.0
 
-# Observations individuelles
+# Individual observations
 wait_times = []
 response_times = []
 queue_lengths = []
 utilizations = []
 
-# Planifier la première arrivée
+# Schedule the first arrival event
 heapq.heappush(event_list, (arrival_times[next_arrival_index], ARRIVAL))
 
-# Boucle principale de simulation
+# Step 3: Main simulation loop
 while num_customers_served < NUM_CUSTOMERS:
     event_time, event_type = heapq.heappop(event_list)
     time_since_last = event_time - last_event_time
@@ -100,52 +96,47 @@ while num_customers_served < NUM_CUSTOMERS:
     current_time = event_time
 
     if event_type == ARRIVAL:
+        # If the server is idle, start serving the customer
         if not server_busy:
             server_busy = True
-            service_time = exp_rv(1 / service_rate)
-            response_times.append(service_time)  # Pas de temps d'attente
+            service_time = hyperx(1 / service_rate, 1 / (service_rate / 2))  # Hyperexponential service time
+            response_times.append(service_time)
             wait_times.append(0.0)
             heapq.heappush(event_list, (current_time + service_time, DEPARTURE))
         else:
             queue.append(current_time)
 
-        # Planifier la prochaine arrivée
-        if num_customers_served + len(queue) + (1 if server_busy else 0) < NUM_CUSTOMERS:
-            next_arrival_index += 1
-            if next_arrival_index < len(arrival_times):
-                next_arrival = arrival_times[next_arrival_index]
-                heapq.heappush(event_list, (next_arrival, ARRIVAL))
+        # Schedule the next arrival
+        next_arrival_index += 1
+        if next_arrival_index < len(arrival_times):
+            next_arrival = arrival_times[next_arrival_index]
+            heapq.heappush(event_list, (next_arrival, ARRIVAL))
 
     elif event_type == DEPARTURE:
         num_customers_served += 1
+        # If there is someone in the queue, start serving them
         if queue:
             arrival_time = queue.pop(0)
             wait_time = current_time - arrival_time
-            service_time = exp_rv(1 / service_rate)
+            service_time = hyperx(1 / service_rate, 1 / (service_rate / 2))
             wait_times.append(wait_time)
             response_times.append(wait_time + service_time)
             heapq.heappush(event_list, (current_time + service_time, DEPARTURE))
         else:
             server_busy = False
 
-# Mise à jour finale
+# Final statistics
 time_total = current_time
 avg_wait, ci_wait = confidence_interval(wait_times)
 avg_response, ci_response = confidence_interval(response_times)
 avg_queue_length = area_queue / time_total
 avg_utilization = area_busy / time_total
 
-# Affichage des résultats
+# Print the results
 print(f"\nSimulation Results for λ={arrival_rate}, μ={service_rate}")
 print(f"Number of customers served: {num_customers_served}")
 print(f"Total simulation time: {time_total:.2f}")
 print(f"Average wait time: {avg_wait:.4f} (95% CI: {ci_wait[0]:.4f}, {ci_wait[1]:.4f})")
-print(f"Average queue length: {avg_queue_length:.4f}")  # Déterministe, pas de CI
-print(f"Server utilization: {avg_utilization:.4f}")     # Déterministe, pas de CI
+print(f"Average queue length: {avg_queue_length:.4f}")  # Deterministic, no CI
+print(f"Server utilization: {avg_utilization:.4f}")     # Deterministic, no CI
 print(f"Average response time: {avg_response:.4f} (95% CI: {ci_response[0]:.4f}, {ci_response[1]:.4f})")
-
-
-# faire une description de gm1 et des lois utilsisees
-# faire une comaparaion avec les resultats theoriques et deduire que a chaque fois le lamba est petit les resulatst ne sont pas  similaires
-# faire les graphes de la simulation et des reultats theoriques
-# https://claude.ai/share/b017cd4c-400a-4e3c-9f4c-781d63429b94
