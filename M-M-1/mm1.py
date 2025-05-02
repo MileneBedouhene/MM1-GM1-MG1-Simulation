@@ -104,3 +104,4 @@ print(f"Average response time: {avg_response:.4f} (95% CI: {ci_response[0]:.4f},
 # je dois comaparer les resultats theoriques avec les resultats simulee 
 # faire les graphes des reultats theoriques
 
+# https://chatgpt.com/share/681532db-9d0c-800c-8436-59f456d390cc
