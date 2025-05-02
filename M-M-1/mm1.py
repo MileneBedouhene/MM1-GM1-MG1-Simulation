@@ -15,7 +15,7 @@ def confidence_interval(data, confidence=0.95):
     return mean, (mean - margin, mean + margin)
 
 # Parameters
-arrival_rate = 0.9  # lambda
+arrival_rate = 0.1  # lambda
 service_rate = 1.0  # mu
 beta = 1 / arrival_rate
 NUM_CUSTOMERS = 1000000
@@ -99,7 +99,8 @@ print(f"Server utilization: {avg_utilization:.4f}")     # Deterministic, no CI
 print(f"Average response time: {avg_response:.4f} (95% CI: {ci_response[0]:.4f}, {ci_response[1]:.4f})")
 
 
-#gm1 generer les arrives a l'avance 
-# et pour la mg1 j
+# pour le rapport 
+# donner un edescription de la mm1 et des lois utiliser
+# je dois comaparer les resultats theoriques avec les resultats simulee 
+# faire les graphes des reultats theoriques
 
-#0,05 
