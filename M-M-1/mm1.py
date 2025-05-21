@@ -15,7 +15,7 @@ def confidence_interval(data, confidence=0.95):
     return mean, (mean - margin, mean + margin)
 
 # Parameters
-arrival_rate = 0.1  # lambda
+arrival_rate = 0.2  # lambda
 service_rate = 1.0  # mu
 beta = 1 / arrival_rate
 NUM_CUSTOMERS = 1000000

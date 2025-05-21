@@ -2,9 +2,10 @@ import random
 import math
 import heapq
 import statistics
+import pandas as pd
 
 def exp_rv(lambda_value):
-    """Generate an exponential random variate with rate lambda_value (1/lambda)."""
+    """Generate an exponential random variate with rate lambda_value."""
     return -math.log(random.random()) / lambda_value
 
 def hyperx(x, s):
@@ -21,7 +22,6 @@ def hyperx(x, s):
     z = cv * cv
     p = 0.5 * (1.0 - math.sqrt((z - 1.0) / (z + 1.0)))
     
-    # Select which exponential to use
     if random.random() > p:
         z = x / (1.0 - p)
     else:
@@ -42,101 +42,144 @@ def generate_arrival_times(lambda_value, num_arrivals):
         arrival_times.append(current_time)
     return arrival_times
 
-# Function to calculate confidence intervals
 def confidence_interval(data, confidence=0.95):
+    """
+    Calculate the mean and 95% confidence interval for the data.
+    """
     n = len(data)
     mean = statistics.mean(data)
-    stddev = statistics.stdev(data)
-    z = 1.96  # for 95% confidence
-    margin = z * (stddev / math.sqrt(n))
-    return mean, (mean - margin, mean + margin)
+    if n > 1:
+        stddev = statistics.stdev(data)
+        z = 1.96  # for 95% confidence interval
+        margin = z * (stddev / math.sqrt(n))
+    else:
+        margin = 0.0
+    return mean, margin
+
+def run_simulation(lambda_value, service_rate=1.0, num_customers=1000000):
+    """
+    Run a single M/G/1 queue simulation with exponential arrivals and hyperexponential service times.
+    """
+    # Check system stability
+    utilization = lambda_value / service_rate
+    if utilization >= 1:
+        raise ValueError(f"Unstable system: λ={lambda_value}, μ={service_rate}, ρ={utilization}")
+
+    # Generate arrival times
+    arrival_times = generate_arrival_times(lambda_value, num_customers)
+
+    # Events
+    ARRIVAL = 1
+    DEPARTURE = 2
+
+    # State variables
+    current_time = 0.0
+    queue = []
+    server_busy = False
+    event_list = []
+    last_event_time = 0.0
+    next_arrival_index = 0
+    num_customers_served = 0
+    area_queue = 0.0
+    area_busy = 0.0
+    wait_times = []
+    response_times = []
+    queue_lengths = []
+    utilizations = []
+
+    # Schedule first arrival
+    heapq.heappush(event_list, (arrival_times[next_arrival_index], ARRIVAL))
+
+    # Main simulation loop
+    while num_customers_served < num_customers and event_list:
+        event_time, event_type = heapq.heappop(event_list)
+        time_since_last = event_time - last_event_time
+        area_queue += len(queue) * time_since_last
+        area_busy += (1 if server_busy else 0) * time_since_last
+        queue_lengths.append(len(queue))
+        utilizations.append(1 if server_busy else 0)
+        last_event_time = event_time
+        current_time = event_time
+
+        if event_type == ARRIVAL:
+            if not server_busy:
+                server_busy = True
+                service_time = hyperx(1 / service_rate, 3 / service_rate)  # cv^2 = 9
+                response_times.append(service_time)
+                wait_times.append(0.0)
+                heapq.heappush(event_list, (current_time + service_time, DEPARTURE))
+            else:
+                queue.append(current_time)
+
+            # Schedule next arrival
+            if num_customers_served + len(queue) + (1 if server_busy else 0) < num_customers:
+                next_arrival_index += 1
+                if next_arrival_index < len(arrival_times):
+                    next_arrival = arrival_times[next_arrival_index]
+                    heapq.heappush(event_list, (next_arrival, ARRIVAL))
+
+        elif event_type == DEPARTURE:
+            num_customers_served += 1
+            if queue:
+                arrival_time = queue.pop(0)
+                wait_time = current_time - arrival_time
+                service_time = hyperx(1 / service_rate, 3 / service_rate)  # cv^2 = 9
+                wait_times.append(wait_time)
+                response_times.append(wait_time + service_time)
+                heapq.heappush(event_list, (current_time + service_time, DEPARTURE))
+            else:
+                server_busy = False
+
+    # Compute final metrics
+    time_total = current_time
+    avg_wait, wait_margin = confidence_interval(wait_times)
+    avg_response, response_margin = confidence_interval(response_times)
+    avg_queue_length = area_queue / time_total
+    avg_utilization = area_busy / time_total
+
+    return {
+        "avg_wait": avg_wait,
+        "wait_margin": wait_margin,
+        "avg_response": avg_response,
+        "response_margin": response_margin,
+        "avg_queue_length": avg_queue_length,
+        "avg_utilization": avg_utilization
+    }
 
 # Parameters
-arrival_rate = 0.9  # lambda (mean arrival rate)
-service_rate = 1.0  # mu (mean service rate)
-NUM_CUSTOMERS = 1000000  # Number of customers to simulate
+lambda_value = 0.9
+service_rate = 1.0
+num_runs = 5
+num_customers = 1000000
 
-# Step 1: Generate arrival times (exponentially distributed)
-arrival_times = generate_arrival_times(arrival_rate, NUM_CUSTOMERS)
+# Run simulations and collect results
+results = []
+for _ in range(num_runs):
+    results.append(run_simulation(lambda_value, service_rate, num_customers))
 
-# Step 2: Initialize events and variables
-ARRIVAL = 1
-DEPARTURE = 2
+# Compute averages for the metrics
+avg_wait = statistics.mean([r['avg_wait'] for r in results])
+avg_response = statistics.mean([r['avg_response'] for r in results])
+avg_queue_length = statistics.mean([r['avg_queue_length'] for r in results])
+avg_utilization = statistics.mean([r['avg_utilization'] for r in results])
 
-current_time = 0.0
-queue = []
-server_busy = False
-event_list = []
-last_event_time = 0.0
-next_arrival_index = 0  # Index for the next arrival to process
+# Prepare data for CSV
+output_data = {
+    "lambda": [lambda_value],
+    "avg_wait_time": [avg_wait],
+    "avg_queue_length": [avg_queue_length],
+    "avg_utilization": [avg_utilization],
+    "avg_response_time": [avg_response]
+}
 
-# Statistics
-num_customers_served = 0
-area_queue = 0.0
-area_busy = 0.0
+# Save to CSV
+df = pd.DataFrame(output_data)
+df.to_csv("mg1_simulation_results.csv", index=False)
+print("Simulation results saved to mg1_simulation_results.csv")
 
-# Individual observations
-wait_times = []
-response_times = []
-queue_lengths = []
-utilizations = []
-
-# Schedule the first arrival event
-heapq.heappush(event_list, (arrival_times[next_arrival_index], ARRIVAL))
-
-# Step 3: Main simulation loop
-while num_customers_served < NUM_CUSTOMERS:
-    event_time, event_type = heapq.heappop(event_list)
-    time_since_last = event_time - last_event_time
-    area_queue += len(queue) * time_since_last
-    area_busy += (1 if server_busy else 0) * time_since_last
-    queue_lengths.append(len(queue))
-    utilizations.append(1 if server_busy else 0)
-    last_event_time = event_time
-    current_time = event_time
-
-    if event_type == ARRIVAL:
-        # If the server is idle, start serving the customer
-        if not server_busy:
-            server_busy = True
-            service_time = hyperx(1 / service_rate, 1 / (service_rate / 2))  # Hyperexponential service time
-            response_times.append(service_time)
-            wait_times.append(0.0)
-            heapq.heappush(event_list, (current_time + service_time, DEPARTURE))
-        else:
-            queue.append(current_time)
-
-        # Schedule the next arrival
-        next_arrival_index += 1
-        if next_arrival_index < len(arrival_times):
-            next_arrival = arrival_times[next_arrival_index]
-            heapq.heappush(event_list, (next_arrival, ARRIVAL))
-
-    elif event_type == DEPARTURE:
-        num_customers_served += 1
-        # If there is someone in the queue, start serving them
-        if queue:
-            arrival_time = queue.pop(0)
-            wait_time = current_time - arrival_time
-            service_time = hyperx(1 / service_rate, 1 / (service_rate / 2))
-            wait_times.append(wait_time)
-            response_times.append(wait_time + service_time)
-            heapq.heappush(event_list, (current_time + service_time, DEPARTURE))
-        else:
-            server_busy = False
-
-# Final statistics
-time_total = current_time
-avg_wait, ci_wait = confidence_interval(wait_times)
-avg_response, ci_response = confidence_interval(response_times)
-avg_queue_length = area_queue / time_total
-avg_utilization = area_busy / time_total
-
-# Print the results
-print(f"\nSimulation Results for λ={arrival_rate}, μ={service_rate}")
-print(f"Number of customers served: {num_customers_served}")
-print(f"Total simulation time: {time_total:.2f}")
-print(f"Average wait time: {avg_wait:.4f} (95% CI: {ci_wait[0]:.4f}, {ci_wait[1]:.4f})")
-print(f"Average queue length: {avg_queue_length:.4f}")  # Deterministic, no CI
-print(f"Server utilization: {avg_utilization:.4f}")     # Deterministic, no CI
-print(f"Average response time: {avg_response:.4f} (95% CI: {ci_response[0]:.4f}, {ci_response[1]:.4f})")
+# Display results
+print(f"\nSimulation Results for (λ={lambda_value}, μ={service_rate})")
+print(f"Average wait time: {avg_wait:.4f}")
+print(f"Average queue length: {avg_queue_length:.4f}")
+print(f"Server utilization: {avg_utilization:.4f}")
+print(f"Average response time: {avg_response:.4f}")
