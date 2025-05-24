@@ -20,7 +20,7 @@ Le modèle **M/M/1** est le plus simple des systèmes de files d'attente. Il se 
 
 Ci-dessous, une comparaison entre les **valeurs théoriques** et les **valeurs simulées** pour le système M/M/1 :
 
-![Comparaison MM1](../ScreenShot/mm1\SimvsTH.png)
+![Comparaison MM1](./ScreenShot/mm1/SimvsTH.png)
 
 ---
 
@@ -38,7 +38,7 @@ Dans notre simulation, nous avons utilisé une **loi hyperexponentielle** pour m
 
 Comparaison entre les valeurs théoriques et simulées pour le système G/M/1 :
 
-![Comparaison GM1](chemin/vers/image_gm1.png)
+![Comparaison GM1](./ScreenShot/gm1/simvsth.png)
 
 ---
 
@@ -52,7 +52,7 @@ Le modèle **M/G/1** conserve les **arrivées exponentielles** (donc sans mémoi
 
 Comparaison entre les valeurs théoriques et simulées pour le système M/G/1 :
 
-![Comparaison MG1](.png)
+![Comparaison MG1](./ScreenShot/mg1/simvsTH.png)
 
 ---
 
@@ -65,7 +65,7 @@ Nous comparons ici les trois systèmes **M/M/1**, **G/M/1**, et **M/G/1** selon 
 - 📦 **Taille moyenne de la file**
 - ⚙️ **Taux d’occupation du serveur**
 
-![Comparaison Globale](chemin/vers/image_comparaison_globale.png)
+![Comparaison Globale](./comparaison.png)
 
 ---
 
