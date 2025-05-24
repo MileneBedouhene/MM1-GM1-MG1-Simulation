@@ -33,6 +33,7 @@ Le modèle **G/M/1** généralise le M/M/1 en permettant **n’importe quelle lo
 Dans notre simulation, nous avons utilisé une **loi hyperexponentielle** pour modéliser la loi G (car elle a une variance plus grande que l'exponentielle, ce qui est courant dans les systèmes réels).
 
 **Remarque** : La loi hyperexponentielle ne satisfait pas la propriété de "sans mémoire", c’est pourquoi les **arrivées ont été générées à l’avance**.
+Donc quand λ augmente, tu as plus d’observations dans le même intervalle de temps, ce qui rend les statistiques simulées plus stables, et la convergence vers la théorie est meilleure.
 
 ### 📊 Résultats obtenus
 
